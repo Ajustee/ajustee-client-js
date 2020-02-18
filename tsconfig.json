@@ -1,0 +1,22 @@
+{
+    "compilerOptions": 
+    {
+        "target": "es2018",
+        "lib": [ "dom", "dom.iterable", "es2018" ],
+        "module": "commonjs", 
+        "removeComments": true,
+        "outDir": "./lib",
+        "sourceMap": false,
+
+        "strict": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+
+        "noEmitOnError": true,
+
+        "listFiles": true,
+
+        "declaration": true
+    },
+    "include": ["src/**/*"]       
+}

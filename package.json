@@ -1,0 +1,15 @@
+{
+  "name": "@ajustee/ajustee-client-js",
+  "version": "0.1.2",
+  "description": "Ajustee Config Center FrontOffice Browser API",
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "author": "Ajustee Config Center team",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^3.5.3"
+  },
+  "files": [
+    "lib"
+  ]
+}
