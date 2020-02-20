@@ -1,5 +1,5 @@
-const defaultUrl = 'https://b3bke9zpxg.execute-api.us-west-2.amazonaws.com/fo';
-const defaultWsUrl = 'wss://2tb5h9sk53.execute-api.us-west-2.amazonaws.com/ws';
+const defaultUrl = 'https://api.ajustee.com/fo';
+const defaultWsUrl = 'wss://9b3vnticrc.execute-api.us-west-2.amazonaws.com/ws';
 
 const enum HttpMethod
 {
@@ -168,8 +168,6 @@ export class AjusteeClient<T extends AjusteeKeyListener<T> = AjusteeKeyListenerB
 		if (appId) this.appId = appId;
 	};
 
-	// http client methods
-
     async getConfigKeys (path?: string, additionalParams?: AjusteeOverrideParams)
     {
         if (!this.appId) throw new Error('App id is not defined.');
@@ -223,8 +221,6 @@ export class AjusteeClient<T extends AjusteeKeyListener<T> = AjusteeKeyListenerB
 		const statusCode = response.status;
 		if(statusCode !== 204) throw new Error(`Invalid response code: ${statusCode}`);
 	}
-
-	// ws client methods
 
 	setConfigKeyListener(keyInfo: T)
 	{
@@ -339,7 +335,10 @@ export class AjusteeClient<T extends AjusteeKeyListener<T> = AjusteeKeyListenerB
 		}
 	}
 
-	// ws lib methods
+	onError()
+	{
+		throw new Error('Connection cannot be established.');
+	}
 
 	private setKeyStatus (keyInfo: T, status: AjusteeKeyStatus)
 	{
@@ -351,6 +350,7 @@ export class AjusteeClient<T extends AjusteeKeyListener<T> = AjusteeKeyListenerB
 	private setStatus (status: AjusteeClientStatus)
 	{
 		this.status = status;
+		// console.trace(this.status);
 		if (this.statusListener) this.statusListener(status);
 	}
 
@@ -393,10 +393,10 @@ export class AjusteeClient<T extends AjusteeKeyListener<T> = AjusteeKeyListenerB
 	{
 		this.webSocket = new WebSocket(`${this.wsUrl}?x-api-key=${this.appId}`);
 		
-		this.webSocket.onopen = this.onConectionOpen.bind(this);
-		this.webSocket.onmessage = this.onMessage.bind(this);
-		this.webSocket.onerror = this.onError.bind(this);
-		this.webSocket.onclose = this.onConectionClose.bind(this);
+		this.webSocket.onopen = this.handleOpen.bind(this);
+		this.webSocket.onmessage = this.handleMessage.bind(this);
+		this.webSocket.onerror = this.handleError.bind(this);
+		this.webSocket.onclose = this.handleClose.bind(this);
 
 		this.connectCompletedPromise = new Promise((resolve)=>{this.connectCompletedResolve = resolve});
 		return this.connectCompletedPromise;
@@ -408,17 +408,25 @@ export class AjusteeClient<T extends AjusteeKeyListener<T> = AjusteeKeyListenerB
 		if (this.status === AjusteeClientStatus.Connecting) return;
 		this.setStatus(AjusteeClientStatus.Connecting);
 
-		do
-		{
-			const isConnected = await this.initConnection();
-			if(!isConnected)
-			{
-				await delay(this.timeout);
-				this.timeout = this.timeout * 2;
-			}
-		}
-		while (this.status as AjusteeClientStatus === AjusteeClientStatus.Connecting);
+		// do
+		// {
+		// 	const isConnected = await this.initConnection();
+		// 	if(!isConnected)
+		// 	{
+		// 		await delay(this.timeout);
+		// 		this.timeout = this.timeout * 2;
+		// 	}
+		// }
+		// while (this.status as AjusteeClientStatus === AjusteeClientStatus.Connecting);
 
+		const isConnected = await this.initConnection();
+		if (!isConnected) 
+		{
+			this.subscribedKeys.clear();
+			this.onError();
+			return;
+		}
+		
 		for (const keyInfo of this.subscribedKeys.values())
 		{
 			this.subscribe(keyInfo);
@@ -450,7 +458,7 @@ export class AjusteeClient<T extends AjusteeKeyListener<T> = AjusteeKeyListenerB
 		this.setStatus(AjusteeClientStatus.Disconnected);
 	}
 
-	private onConectionOpen (event: Event)
+	private handleOpen (event: Event)
 	{
 		// console.log('Connection is opened.', event);
 		this.setStatus(AjusteeClientStatus.Connected);
@@ -458,51 +466,63 @@ export class AjusteeClient<T extends AjusteeKeyListener<T> = AjusteeKeyListenerB
 		this.connectCompletedResolve!(true);
 		this.connectCompletedResolve = undefined;
 		this.connectCompletedPromise = undefined;		
+
+
+		// console.log(this.webSocket);
 	}
 
-	private onConectionClose (event: CloseEvent)
+	private handleClose (event: CloseEvent)
 	{
 		// console.log('Connection is closed.', event);
-		if (this.status === AjusteeClientStatus.Disconnected) return;
 		this.setStatus(AjusteeClientStatus.Disconnected);
-		if (this.subscribedKeys.size > 0)
-		{
-			for (const keyInfo of this.subscribedKeys.values())
-			{
-				const oldKey = keyInfo.oldKey;
-				if (oldKey) 
-				{
-					keyInfo.oldKey = undefined;
-					this.setKeyStatus(oldKey, AjusteeKeyStatus.Unsubscribed);
-				}
-				else if (keyInfo.status === AjusteeKeyStatus.Unsubscribing) 
-				{
-					this.setKeyStatus(keyInfo, AjusteeKeyStatus.Unsubscribed);
-					this.subscribedKeys.delete(keyInfo.path);
-				}
-			}
-			this.connect();
-		}
-		if (this.statusListener) this.statusListener(this.status);
-	}
 
-	private onError (event: Event)
-	{
-		// console.log('Error:', event);
+		if (event.code === 1001)
+		{
+			if (this.subscribedKeys.size > 0)
+			{
+				for (const keyInfo of this.subscribedKeys.values())
+				{
+					const oldKey = keyInfo.oldKey;
+					if (oldKey) 
+					{
+						keyInfo.oldKey = undefined;
+						this.setKeyStatus(oldKey, AjusteeKeyStatus.Unsubscribed);
+					}
+					else if (keyInfo.status === AjusteeKeyStatus.Unsubscribing) 
+					{
+						this.setKeyStatus(keyInfo, AjusteeKeyStatus.Unsubscribed);
+						this.subscribedKeys.delete(keyInfo.path);
+					}
+				}
+				setTimeout(this.connect.bind(this), 0);
+			}
+		}
 		this.webSocket!.onopen = null;
 		this.webSocket!.onmessage = null;
 		this.webSocket!.onerror = null;
 		this.webSocket!.onclose = null;
 		this.webSocket = undefined;
+	}
+
+	private handleError (event: Event)
+	{
+		// console.log('Error:', event);
+		// console.log(this.webSocket);
+
+		// this.webSocket!.onopen = null;
+		// this.webSocket!.onmessage = null;
+		// this.webSocket!.onerror = null;
+		// this.webSocket!.onclose = null;
+		// this.webSocket = undefined;
 
 		this.connectCompletedResolve!(false);
 		this.connectCompletedResolve = undefined;
 		this.connectCompletedPromise = undefined;
 	}
 
-	private onMessage (event: MessageEvent)
+	private async handleMessage (event: MessageEvent)
 	{
-		// console.log('Message from server:', event, response);
+		// console.log('Message from server:', event);
 		const response = (JSON.parse(event.data) as WsResponse);
 
 		switch(response.type)
@@ -564,6 +584,7 @@ export class AjusteeClient<T extends AjusteeKeyListener<T> = AjusteeKeyListenerB
 
 			case WsResponseType.Unsubscribe:
 			{
+				await delay(3000);
 				const unSubscrData = (response.data as WsResponseData);
 				const unsubscrKey = this.subscribedKeys.get(unSubscrData.path);
 				if(!unsubscrKey) 

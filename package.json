@@ -1,13 +1,17 @@
 {
-  "name": "@ajustee/ajustee-client-js",
-  "version": "0.1.2",
+  "name": "@ajustee/ajustee-client-web",
+  "version": "1.0.0",
   "description": "Ajustee Config Center FrontOffice Browser API",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "author": "Ajustee Config Center team",
   "license": "ISC",
+  "repository": {
+	"type" : "git",
+	"url" : "https://github.com/Ajustee/ajustee-client-web.git"
+  },
   "devDependencies": {
-    "typescript": "^3.5.3"
+    "typescript": "^3.7.5"
   },
   "files": [
     "lib"
