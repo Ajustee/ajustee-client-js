@@ -1,6 +1,6 @@
 {
   "name": "@ajustee/ajustee-client-web",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Ajustee Config Center FrontOffice Browser API",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
