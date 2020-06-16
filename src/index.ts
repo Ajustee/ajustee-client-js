@@ -233,10 +233,10 @@ export class AjusteeClient<T extends AjusteeKeyListener<T> = AjusteeKeyListenerB
 		{
 			case AjusteeClientStatus.Disconnected:
 			case AjusteeClientStatus.Connecting:
-				if (currKeyInfo)
-				{
-					this.setKeyStatus(currKeyInfo, AjusteeKeyStatus.Unsubscribed);
-				}
+				
+				if (currKeyInfo) this.setKeyStatus(currKeyInfo, AjusteeKeyStatus.Unsubscribed);
+				else this.setKeyStatus(keyInfo, AjusteeKeyStatus.Subscribing);
+
 				this.subscribedKeys.set(keyInfo.path, keyInfo);
 				this.connect();
 				return;
