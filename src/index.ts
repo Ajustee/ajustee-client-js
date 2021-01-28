@@ -174,7 +174,7 @@ export class AjusteeClient<T extends AjusteeKeyListener<T> = AjusteeKeyListenerB
 	{
 		this.url = url ? url : defaultUrl;
 		this.wsUrl = wsUrl ? wsUrl : defaultWsUrl;
-		if (appId) this.appId = appId;
+        if (appId) this.appId = appId;
 	};
 
     async getConfigKeys (path?: string, additionalParams?: AjusteeOverrideParams)
@@ -495,9 +495,9 @@ export class AjusteeClient<T extends AjusteeKeyListener<T> = AjusteeKeyListenerB
 				{
 					this.setKeyStatus(keyInfo, AjusteeKeyStatus.Unsubscribed);
 					this.subscribedKeys.delete(keyInfo.path);
-				}
+                }
 			}
-			setTimeout(this.connect.bind(this), 0);
+            setTimeout(this.connect.bind(this), 0);
 		}
 
 		this.webSocket!.onopen = null;
@@ -587,12 +587,11 @@ export class AjusteeClient<T extends AjusteeKeyListener<T> = AjusteeKeyListenerB
 
 			case WsResponseType.Unsubscribe:
 			{
-				await delay(3000);
 				const unSubscrData = (response.data as WsResponseData);
 				const unsubscrKey = this.subscribedKeys.get(unSubscrData.path);
 				if(!unsubscrKey)
 				{
-					console.warn(`Unexpected event ${response.type} for the key path '${unSubscrData.path}'.`);
+					if(this.status === AjusteeClientStatus.Connected) console.warn(`Unexpected event ${response.type} for the key path '${unSubscrData.path}'.`);
 					return;
 				}
 				const oldKeyInfo = unsubscrKey.oldKey;
